@@ -50,3 +50,20 @@ Verify Installation:PowerShell
 ```powershell
 Get-WindowsFeature -Name GPMC
 ```
+## Install DSCv3 resources 
+
+In Desired State Configuration v3 (DSC v3), there is no single mandatory "root folder" like older PowerShell DSC versions had with the Local Configuration Manager (LCM).Where DSC v3 looks for resources or executables depends on how they are installed and configured:
+
+1. The Executable Path (dsc.exe)If installed via WinGet / Microsoft Store, the dsc.exe application execution alias resides at:  
+```powershell
+C:\Users\<Username>\AppData\Local\Microsoft\WindowsApps\Microsoft.DesiredStateConfiguration_8wekyb3d8bbwe\dsc.exe
+```
+
+If installed manually via portable release, the root folder is whichever directory you extracted the archive to (and added to your system $env:PATH).2. DSC v3 Resource Discovery (Executable & Manifest Resources)DSC v3 discovers native executable resources (or adapters) by searching all directories listed in your system's PATH environment variable.  
+It searches every folder in $env:PATH for resource manifest files with these suffixes:  
+```powershell
+*.dsc.resource.json  
+*.ps1
+```
+
+To place a custom DSC v3 command-line resource so dsc resource list finds it, place the executable and its .dsc.resource.json manifest into any directory that is part of your system/user PATH.
