@@ -1,0 +1,39 @@
+# Creates a GPO and links it to an OU.
+# Apply:    dsc config set    -f gpo-linked-to-ou.dsc.yaml
+# What-if:  dsc config set -w -f gpo-linked-to-ou.dsc.yaml
+$schema: https://aka.ms/dsc/schemas/v3/bundled/config/document.json
+metadata:
+  Microsoft.DSC:
+    securityContext: elevated
+resources:
+
+  - name: Security Baseline GPO
+    type: ActiveDirectory.GroupPolicy/GPO
+    properties:
+      name: Contoso Security Baseline
+      comment: Enforces the corporate security baseline for workstations.
+      gpoStatus: AllSettingsEnabled
+      ensure: Present
+
+  - name: Link GPO to Workstations OU
+    type: ActiveDirectory.GroupPolicy/GPLink
+    dependsOn:
+      - "[resourceId('ActiveDirectory.GroupPolicy/GPO', 'Security Baseline GPO')]"
+    properties:
+      gpoName: Contoso Security Baseline
+      target: ou=Workstations,ou=Computers,dc=contoso,dc=com
+      linkEnabled: 'Yes'
+      enforced: 'No'
+      order: 1
+      ensure: Present
+
+  - name: Link GPO to Servers OU
+    type: ActiveDirectory.GroupPolicy/GPLink
+    dependsOn:
+      - "[resourceId('ActiveDirectory.GroupPolicy/GPO', 'Security Baseline GPO')]"
+    properties:
+      gpoName: Contoso Security Baseline
+      target: ou=Servers,ou=Computers,dc=contoso,dc=com
+      linkEnabled: 'Yes'
+      enforced: 'Yes'
+      ensure: Present

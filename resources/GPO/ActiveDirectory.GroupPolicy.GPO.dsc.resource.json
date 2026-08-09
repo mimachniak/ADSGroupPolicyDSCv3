@@ -1,0 +1,120 @@
+{
+    "$schema": "https://aka.ms/dsc/schemas/v3/bundled/resource/manifest.json",
+    "type": "ActiveDirectory.GroupPolicy/GPO",
+    "description": "Manages Active Directory Group Policy Objects using the Windows GroupPolicy PowerShell module.",
+    "version": "0.1.0",
+    "tags": ["Windows", "ActiveDirectory", "GroupPolicy"],
+    "get": {
+        "executable": "powershell",
+        "args": [
+            "-NoLogo",
+            "-NonInteractive",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            "ActiveDirectory.GroupPolicy.GPO.ps1",
+            "Get"
+        ],
+        "input": "stdin"
+    },
+    "set": {
+        "executable": "powershell",
+        "args": [
+            "-NoLogo",
+            "-NonInteractive",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            "ActiveDirectory.GroupPolicy.GPO.ps1",
+            "Set"
+        ],
+        "input": "stdin",
+        "implementsPretest": false,
+        "return": "state",
+        "requireSecurityContext": "elevated"
+    },
+    "test": {
+        "executable": "powershell",
+        "args": [
+            "-NoLogo",
+            "-NonInteractive",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            "ActiveDirectory.GroupPolicy.GPO.ps1",
+            "Test"
+        ],
+        "input": "stdin",
+        "return": "state"
+    },
+    "exitCodes": {
+        "0": "Success",
+        "1": "Invalid arguments or JSON input",
+        "2": "GroupPolicy PowerShell module not available",
+        "3": "Group Policy operation failed"
+    },
+    "schema": {
+        "embedded": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "required": ["name"],
+            "additionalProperties": false,
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Display name of the GPO. Must be unique in the domain."
+                },
+                "comment": {
+                    "type": ["string", "null"],
+                    "description": "Comment or description for the GPO (up to 2047 characters)."
+                },
+                "domain": {
+                    "type": ["string", "null"],
+                    "description": "FQDN of the domain containing the GPO. Defaults to the current user's domain."
+                },
+                "server": {
+                    "type": ["string", "null"],
+                    "description": "FQDN or host name of the domain controller to contact. Defaults to the PDC emulator."
+                },
+                "starterGpoName": {
+                    "type": ["string", "null"],
+                    "description": "Display name of the Starter GPO to pre-populate settings when creating a new GPO."
+                },
+                "gpoStatus": {
+                    "type": ["string", "null"],
+                    "enum": ["AllSettingsEnabled", "UserSettingsDisabled", "ComputerSettingsDisabled", "AllSettingsDisabled", null],
+                    "description": "Specifies whether computer configuration, user configuration, both, or neither are enabled."
+                },
+                "id": {
+                    "type": ["string", "null"],
+                    "readOnly": true,
+                    "description": "GUID that uniquely identifies the GPO in the domain (populated by get/set)."
+                },
+                "owner": {
+                    "type": ["string", "null"],
+                    "readOnly": true,
+                    "description": "Security principal that owns the GPO (populated by get/set)."
+                },
+                "ensure": {
+                    "type": ["string", "null"],
+                    "enum": ["Present", "Absent", null],
+                    "description": "'Present' ensures the GPO exists; 'Absent' removes it. Defaults to 'Present'.",
+                    "default": "Present"
+                },
+                "_exist": {
+                    "type": ["boolean", "null"],
+                    "description": "Whether the GPO should exist. Deprecated — use 'ensure' instead. Defaults to true.",
+                    "default": true
+                },
+                "_inDesiredState": {
+                    "type": ["boolean", "null"],
+                    "readOnly": true,
+                    "description": "Indicates whether the current state matches the desired state (populated by test/set)."
+                }
+            }
+        }
+    }
+}

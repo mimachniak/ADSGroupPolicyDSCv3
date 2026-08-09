@@ -1,0 +1,29 @@
+# Removes a GPO link and then the GPO itself — run with: dsc config set -f gpo-remove.dsc.yaml
+$schema: https://aka.ms/dsc/schemas/v3/bundled/config/document.json
+metadata:
+  Microsoft.DSC:
+    securityContext: elevated
+resources:
+
+  - name: Remove link from Workstations OU
+    type: ActiveDirectory.GroupPolicy/GPLink
+    properties:
+      gpoName: Contoso Security Baseline
+      target: ou=Workstations,ou=Computers,dc=contoso,dc=com
+      ensure: Absent
+
+  - name: Remove link from Servers OU
+    type: ActiveDirectory.GroupPolicy/GPLink
+    properties:
+      gpoName: Contoso Security Baseline
+      target: ou=Servers,ou=Computers,dc=contoso,dc=com
+      ensure: Absent
+
+  - name: Remove the GPO
+    type: ActiveDirectory.GroupPolicy/GPO
+    dependsOn:
+      - "[resourceId('ActiveDirectory.GroupPolicy/GPLink', 'Remove link from Workstations OU')]"
+      - "[resourceId('ActiveDirectory.GroupPolicy/GPLink', 'Remove link from Servers OU')]"
+    properties:
+      name: Contoso Security Baseline
+      ensure: Absent

@@ -1,0 +1,20 @@
+# Queries the current state of a GPO and its links — run with: dsc config get -f gpo-inventory.dsc.yaml
+$schema: https://aka.ms/dsc/schemas/v3/bundled/config/document.json
+resources:
+
+  - name: Security Baseline GPO state
+    type: ActiveDirectory.GroupPolicy/GPO
+    properties:
+      name: Contoso Security Baseline
+
+  - name: Workstations OU link state
+    type: ActiveDirectory.GroupPolicy/GPLink
+    properties:
+      gpoName: Contoso Security Baseline
+      target: ou=Workstations,ou=Computers,dc=contoso,dc=com
+
+  - name: Servers OU link state
+    type: ActiveDirectory.GroupPolicy/GPLink
+    properties:
+      gpoName: Contoso Security Baseline
+      target: ou=Servers,ou=Computers,dc=contoso,dc=com

@@ -1,0 +1,62 @@
+# Configures registry-based policy settings inside a GPO.
+# Apply:   dsc config set    -f gpo-registry-values.dsc.yaml
+# What-if: dsc config set -w -f gpo-registry-values.dsc.yaml
+# Get:     dsc config get    -f gpo-registry-values.dsc.yaml
+$schema: https://aka.ms/dsc/schemas/v3/bundled/config/document.json
+metadata:
+  Microsoft.DSC:
+    securityContext: elevated
+resources:
+
+  # --- Screen saver timeout (User Configuration / DWord) ---
+  - name: Screen saver timeout
+    type: ActiveDirectory.GroupPolicy/GPRegistryValue
+    properties:
+      gpoName:   DSC-Test
+      key:       HKCU\Software\Policies\Microsoft\Windows\Control Panel\Desktop
+      valueName: ScreenSaveTimeOut
+      type:      DWord
+      value:     60
+      ensure:    Present
+
+  # --- Screen saver executable (User Configuration / String) ---
+  - name: Screen saver executable
+    type: ActiveDirectory.GroupPolicy/GPRegistryValue
+    properties:
+      gpoName:   DSC-Test
+      key:       HKCU\Software\Policies\Microsoft\Windows\Control Panel\Desktop
+      valueName: SCRNSAVE.EXE
+      type:      String
+      value:     scrnsave.scr
+      ensure:    Present
+
+  # --- Disable lock-screen camera (Computer Configuration / DWord) ---
+  - name: Disable lock-screen camera
+    type: ActiveDirectory.GroupPolicy/GPRegistryValue
+    properties:
+      gpoName:   DSC-Test
+      key:       HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Personalization
+      valueName: NoLockScreenCamera
+      type:      DWord
+      value:     1
+      ensure:    Present
+
+  # --- ExpandString example: wallpaper path ---
+  - name: Desktop wallpaper path
+    type: ActiveDirectory.GroupPolicy/GPRegistryValue
+    properties:
+      gpoName:   DSC-Test
+      key:       HKCU\Software\Policies\Microsoft\Windows\Personalization
+      valueName: DesktopImagePath
+      type:      ExpandString
+      value:     '%SystemRoot%\web\wallpaper\Windows\img0.jpg'
+      ensure:    Present
+
+  # --- Remove a registry policy setting (ensure: Absent) ---
+  - name: Remove legacy proxy setting
+    type: ActiveDirectory.GroupPolicy/GPRegistryValue
+    properties:
+      gpoName:   DSC-Test
+      key:       HKCU\Software\Policies\Microsoft\Windows\CurrentVersion\Internet Settings
+      valueName: ProxyEnable
+      ensure:    Absent
