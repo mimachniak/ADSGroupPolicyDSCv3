@@ -59,7 +59,9 @@ In Desired State Configuration v3 (DSC v3), there is no single mandatory "root f
 C:\Users\<Username>\AppData\Local\Microsoft\WindowsApps\Microsoft.DesiredStateConfiguration_8wekyb3d8bbwe\dsc.exe
 ```
 
-If installed manually via portable release, the root folder is whichever directory you extracted the archive to (and added to your system $env:PATH).2. DSC v3 Resource Discovery (Executable & Manifest Resources)DSC v3 discovers native executable resources (or adapters) by searching all directories listed in your system's PATH environment variable.  
+If installed manually via portable release, the root folder is whichever directory you extracted the archive to (and added to your system $env:PATH).  
+
+2. DSC v3 Resource Discovery (Executable & Manifest Resources)DSC v3 discovers native executable resources (or adapters) by searching all directories listed in your system's PATH environment variable.  
 It searches every folder in $env:PATH for resource manifest files with these suffixes:  
 ```powershell
 *.dsc.resource.json  
