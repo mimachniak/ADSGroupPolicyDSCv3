@@ -15,7 +15,7 @@ resources:
       gpoName:   DSC-Test
       key:       HKCU\Software\Policies\Microsoft\Windows\Control Panel\Desktop
       valueName: ScreenSaveTimeOut
-      type:      DWord
+      type:      String
       value:     60
       ensure:    Present
 
