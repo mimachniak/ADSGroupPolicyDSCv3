@@ -21,6 +21,12 @@ The main DSC v3 resources are located in the `resources` folder:
 - `GPRegistryValue`
 - `GPPrefRegistryValue`
 
+## Example images 
+
+![DSC Active Directory Registry GPO](./image/gp-regedit-vaulue.png)  
+
+![DSC Active Directory Registry GPO](./image/gpo-pref-regedit-vaulue.png) 
+
 ## Requirements and Dependencies
 
 These DSC v3 resources depend on Windows Group Policy management components.

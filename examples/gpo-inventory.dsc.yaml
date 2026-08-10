@@ -6,15 +6,18 @@ resources:
     type: ActiveDirectory.GroupPolicy/GPO
     properties:
       name: Contoso Security Baseline
+      ensure: Present
 
   - name: Workstations OU link state
     type: ActiveDirectory.GroupPolicy/GPLink
     properties:
       gpoName: Contoso Security Baseline
       target: ou=Workstations,ou=Computers,dc=contoso,dc=com
+      ensure: Present
 
   - name: Servers OU link state
     type: ActiveDirectory.GroupPolicy/GPLink
     properties:
       gpoName: Contoso Security Baseline
       target: ou=Servers,ou=Computers,dc=contoso,dc=com
+      ensure: Present
