@@ -50,10 +50,24 @@
         "input": "stdin",
         "return": "state"
     },
+    "export": {
+        "executable": "powershell",
+        "args": [
+            "-NoLogo",
+            "-NonInteractive",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            "ActiveDirectory.GroupPolicy.GPLink.ps1",
+            "Export"
+        ],
+        "input": "stdin"
+    },
     "exitCodes": {
         "0": "Success",
         "1": "Invalid arguments or JSON input",
-        "2": "GroupPolicy PowerShell module not available",
+        "2": "GroupPolicy or ActiveDirectory PowerShell module not available",
         "3": "Group Policy link operation failed"
     },
     "schema": {

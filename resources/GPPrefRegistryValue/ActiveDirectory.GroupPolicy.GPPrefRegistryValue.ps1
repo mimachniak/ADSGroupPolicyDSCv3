@@ -4,7 +4,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory, Position = 0)]
-    [ValidateSet('Get', 'Set', 'Test')]
+    [ValidateSet('Get', 'Set', 'Test', 'Export')]
     [string]$Operation
 )
 
@@ -27,8 +27,12 @@ function Write-DscTrace {
 #region Parse stdin
 $jsonInput = [Console]::In.ReadToEnd().Trim()
 if ([string]::IsNullOrWhiteSpace($jsonInput)) {
-    Write-DscTrace -Level Error -Message 'No JSON input received on stdin.'
-    exit 1
+    if ($Operation -eq 'Export') {
+        $jsonInput = '{}'
+    } else {
+        Write-DscTrace -Level Error -Message 'No JSON input received on stdin.'
+        exit 1
+    }
 }
 
 try {
@@ -38,16 +42,19 @@ try {
     exit 1
 }
 
-foreach ($req in @('gpoName', 'context', 'key')) {
-    if ([string]::IsNullOrEmpty($config.$req)) {
-        Write-DscTrace -Level Error -Message "Required property '$req' is missing or empty."
+# 'gpoName'/'context'/'key' identify a single instance; export enumerates every preference item instead.
+if ($Operation -ne 'Export') {
+    foreach ($req in @('gpoName', 'context', 'key')) {
+        if ([string]::IsNullOrEmpty($config.$req)) {
+            Write-DscTrace -Level Error -Message "Required property '$req' is missing or empty."
+            exit 1
+        }
+    }
+
+    if ($config.context -notin @('User', 'Computer')) {
+        Write-DscTrace -Level Error -Message "Property 'context' must be 'User' or 'Computer'."
         exit 1
     }
-}
-
-if ($config.context -notin @('User', 'Computer')) {
-    Write-DscTrace -Level Error -Message "Property 'context' must be 'User' or 'Computer'."
-    exit 1
 }
 #endregion
 
@@ -210,6 +217,30 @@ function Merge-Params([hashtable]$base, [hashtable]$extra) {
     foreach ($kv in $extra.GetEnumerator()) { $merged[$kv.Key] = $kv.Value }
     return $merged
 }
+
+function Get-AllPrefRegistryItems([string]$gpo, [string]$ctx) {
+    # Walks each registry hive's preference tree per GPO/context. Get-GPPrefRegistryValue returns
+    # first-level items plus first-level subkeys for any key; subkeys are queued so every item is found.
+    $results = [System.Collections.Generic.List[object]]::new()
+    $rootKeys = @('HKEY_CLASSES_ROOT', 'HKEY_CURRENT_USER', 'HKEY_LOCAL_MACHINE', 'HKEY_USERS', 'HKEY_CURRENT_CONFIG')
+    foreach ($rootKey in $rootKeys) {
+        $queue = [System.Collections.Generic.Queue[string]]::new()
+        $queue.Enqueue($rootKey)
+        $visited = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        while ($queue.Count -gt 0) {
+            $currentKey = $queue.Dequeue()
+            if (-not $visited.Add($currentKey)) { continue }
+            $getParams = Merge-Params -base @{ Name = $gpo; Context = $ctx; Key = $currentKey } -extra $commonParams
+            $items = @(Get-GPPrefRegistryValue @getParams -ErrorAction SilentlyContinue)
+            foreach ($item in $items) {
+                # A returned entry with an Action is a real preference item; entries without one are browsable subkeys only.
+                if ($null -ne $item.Action) { $results.Add($item) }
+                if (-not [string]::IsNullOrEmpty($item.FullKeyPath)) { $queue.Enqueue($item.FullKeyPath) }
+            }
+        }
+    }
+    return $results
+}
 #endregion
 
 try {
@@ -224,6 +255,36 @@ try {
             $current = Get-CurrentState
             $current['_inDesiredState'] = Test-InDesiredState -current $current
             $current | ConvertTo-Json -Compress
+        }
+
+        'Export' {
+            # Emit one JSON line per existing preference item so `dsc resource export` can build a configuration document.
+            $gpos = Get-GPO -All @commonParams -ErrorAction Stop
+            foreach ($gpo in $gpos) {
+                foreach ($ctx in @('User', 'Computer')) {
+                    foreach ($item in (Get-AllPrefRegistryItems -gpo $gpo.DisplayName -ctx $ctx)) {
+                        $regType = if ($item.HasValue) { $item.Type.ToString() } else { $null }
+                        $serial  = if ($item.HasValue) { ConvertTo-SerializableValue -rawValue $item.Value -regType $regType } else { $null }
+                        $state = [ordered]@{
+                            gpoName          = $gpo.DisplayName
+                            context          = $ctx
+                            key              = $item.FullKeyPath
+                            valueName        = if ($item.HasValue) { $item.ValueName } else { $null }
+                            action           = $item.Action.ToString()
+                            type             = $regType
+                            value            = $serial
+                            order            = [int]$item.Order
+                            disabled         = $item.DisabledDirectly
+                            disabledDirectly = $item.DisabledDirectly
+                            domain           = if (-not [string]::IsNullOrEmpty($domain)) { $domain } else { $null }
+                            server           = if (-not [string]::IsNullOrEmpty($server)) { $server } else { $null }
+                            ensure           = 'Present'
+                            _exist           = $true
+                        }
+                        $state | ConvertTo-Json -Compress
+                    }
+                }
+            }
         }
 
         'Set' {

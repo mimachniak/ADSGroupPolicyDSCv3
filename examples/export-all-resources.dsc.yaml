@@ -1,0 +1,33 @@
+# Exports every existing GPO, link, and registry value into a usable configuration document.
+# Run with: dsc config export -f export-all-resources.dsc.yaml -o yaml > gpo-current-state.dsc.yaml
+#
+# The 'properties' values below are placeholders only. DSC requires them to satisfy each
+# resource's required-property schema, but the export operation ignores them and instead
+# enumerates every existing instance of the resource.
+$schema: https://aka.ms/dsc/schemas/v3/bundled/config/document.json
+resources:
+
+  - name: All GPOs
+    type: ActiveDirectory.GroupPolicy/GPO
+    properties:
+      name: placeholder
+
+  - name: All GPO Links
+    type: ActiveDirectory.GroupPolicy/GPLink
+    properties:
+      gpoName: placeholder
+      target: placeholder
+
+  - name: All GPO Registry Policy Values
+    type: ActiveDirectory.GroupPolicy/GPRegistryValue
+    properties:
+      gpoName: placeholder
+      key: placeholder
+      valueName: placeholder
+
+  - name: All GPO Preference Registry Values
+    type: ActiveDirectory.GroupPolicy/GPPrefRegistryValue
+    properties:
+      gpoName: placeholder
+      context: User
+      key: placeholder
