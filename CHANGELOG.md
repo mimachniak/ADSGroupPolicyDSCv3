@@ -36,5 +36,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 
 - Added `export` operation documentation to each resource wiki page with scoping guidance
-- Added export section to [Examples: All Resources](https://github.com/michealmax/ADSGroupPolicyDSCv3/wiki/Examples-All-Resources)
-- Updated [Home.md](https://github.com/michealmax/ADSGroupPolicyDSCv3/wiki/Home.md) with export CLI usage example
+- Added export section to [Examples: All Resources](https://github.com/mimachniak/ADSGroupPolicyDSCv3/wiki/Examples-All-Resources#examples-all-resources)
+- Updated [Home.md](https://github.com/mimachniak/ADSGroupPolicyDSCv3/wiki) with export CLI usage example
