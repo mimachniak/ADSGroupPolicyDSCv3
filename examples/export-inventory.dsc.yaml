@@ -1,0 +1,12 @@
+# Exports GPO metadata into a usable configuration document.
+# Run with: dsc config export -f export-inventory.dsc.yaml -o yaml > gpo-inventory-current.dsc.yaml
+#
+# Declaring 'name' scopes the export to that single GPO. Omit it (or use
+# export-all-resources.dsc.yaml) to export every GPO instead.
+$schema: https://aka.ms/dsc/schemas/v3/bundled/config/document.json
+resources:
+
+  - name: DSC-Test GPO state
+    type: ActiveDirectory.GroupPolicy/GPO
+    properties:
+      name: DSC-Test

@@ -1,0 +1,13 @@
+# Exports GPO links into a usable configuration document.
+# Run with: dsc config export -f export-linked-to-ou-.dsc.yaml -o yaml > gpo-links-current.dsc.yaml
+#
+# Declaring 'gpoName' filters the export to links for that GPO; declaring 'target' instead
+# scopes to a single OU/domain/site. Omit both (or use export-all-resources.dsc.yaml) to
+# export every link in the domain instead.
+$schema: https://aka.ms/dsc/schemas/v3/bundled/config/document.json
+resources:
+
+- name: DSC-Test GPO links
+  type: ActiveDirectory.GroupPolicy/GPLink
+  properties:
+    gpoName: DSC-Test

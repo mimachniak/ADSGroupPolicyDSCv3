@@ -4,7 +4,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory, Position = 0)]
-    [ValidateSet('Get', 'Set', 'Test')]
+    [ValidateSet('Get', 'Set', 'Test', 'Export')]
     [string]$Operation
 )
 
@@ -27,8 +27,12 @@ function Write-DscTrace {
 #region Parse stdin
 $jsonInput = [Console]::In.ReadToEnd().Trim()
 if ([string]::IsNullOrWhiteSpace($jsonInput)) {
-    Write-DscTrace -Level Error -Message 'No JSON input received on stdin.'
-    exit 1
+    if ($Operation -eq 'Export') {
+        $jsonInput = '{}'
+    } else {
+        Write-DscTrace -Level Error -Message 'No JSON input received on stdin.'
+        exit 1
+    }
 }
 
 try {
@@ -38,7 +42,8 @@ try {
     exit 1
 }
 
-if ([string]::IsNullOrEmpty($config.name)) {
+# 'name' identifies a single instance; export enumerates every GPO instead.
+if ($Operation -ne 'Export' -and [string]::IsNullOrEmpty($config.name)) {
     Write-DscTrace -Level Error -Message "Required property 'name' is missing or empty."
     exit 1
 }
@@ -124,6 +129,30 @@ try {
             $current = Get-CurrentState
             $current['_inDesiredState'] = Test-InDesiredState -current $current
             $current | ConvertTo-Json -Compress
+        }
+
+        'Export' {
+            # Emit one JSON line per existing GPO so `dsc resource export` can build a configuration document.
+            # A declared 'name' scopes the export to that single GPO instead of every GPO.
+            $gpos = if (-not [string]::IsNullOrEmpty($name)) {
+                @(Get-GPO -Name $name @commonParams -ErrorAction Stop)
+            } else {
+                Get-GPO -All @commonParams -ErrorAction Stop
+            }
+            foreach ($gpo in $gpos) {
+                $state = [ordered]@{
+                    name      = $gpo.DisplayName
+                    ensure    = 'Present'
+                    comment   = $gpo.Description
+                    domain    = $gpo.DomainName
+                    server    = if (-not [string]::IsNullOrEmpty($server)) { $server } else { $null }
+                    gpoStatus = $gpo.GpoStatus.ToString()
+                    id        = $gpo.Id.ToString()
+                    owner     = $gpo.Owner
+                    _exist    = $true
+                }
+                $state | ConvertTo-Json -Compress
+            }
         }
 
         'Set' {

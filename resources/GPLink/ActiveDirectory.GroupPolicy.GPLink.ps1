@@ -4,7 +4,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory, Position = 0)]
-    [ValidateSet('Get', 'Set', 'Test')]
+    [ValidateSet('Get', 'Set', 'Test', 'Export')]
     [string]$Operation
 )
 
@@ -27,8 +27,12 @@ function Write-DscTrace {
 #region Parse stdin
 $jsonInput = [Console]::In.ReadToEnd().Trim()
 if ([string]::IsNullOrWhiteSpace($jsonInput)) {
-    Write-DscTrace -Level Error -Message 'No JSON input received on stdin.'
-    exit 1
+    if ($Operation -eq 'Export') {
+        $jsonInput = '{}'
+    } else {
+        Write-DscTrace -Level Error -Message 'No JSON input received on stdin.'
+        exit 1
+    }
 }
 
 try {
@@ -38,13 +42,16 @@ try {
     exit 1
 }
 
-if ([string]::IsNullOrEmpty($config.gpoName)) {
-    Write-DscTrace -Level Error -Message "Required property 'gpoName' is missing or empty."
-    exit 1
-}
-if ([string]::IsNullOrEmpty($config.target)) {
-    Write-DscTrace -Level Error -Message "Required property 'target' is missing or empty."
-    exit 1
+# 'gpoName'/'target' identify a single instance; export enumerates every link instead.
+if ($Operation -ne 'Export') {
+    if ([string]::IsNullOrEmpty($config.gpoName)) {
+        Write-DscTrace -Level Error -Message "Required property 'gpoName' is missing or empty."
+        exit 1
+    }
+    if ([string]::IsNullOrEmpty($config.target)) {
+        Write-DscTrace -Level Error -Message "Required property 'target' is missing or empty."
+        exit 1
+    }
 }
 #endregion
 
@@ -134,6 +141,36 @@ function Merge-Params([hashtable]$base, [hashtable]$extra) {
     foreach ($kv in $extra.GetEnumerator()) { $merged[$kv.Key] = $kv.Value }
     return $merged
 }
+
+function Get-AllLinkTargets {
+    # Discovers every site, domain root, and OU distinguished name that can hold a GPO link.
+    # Requires the ActiveDirectory module; sites live under the Configuration naming context.
+    $adParams = @{}
+    if (-not [string]::IsNullOrEmpty($server)) { $adParams['Server'] = $server }
+    elseif (-not [string]::IsNullOrEmpty($domain)) { $adParams['Server'] = $domain }
+
+    $targets = [System.Collections.Generic.List[string]]::new()
+
+    try {
+        $rootDse = Get-ADRootDSE @adParams -ErrorAction Stop
+        $targets.Add($rootDse.defaultNamingContext)
+
+        Get-ADOrganizationalUnit -Filter * @adParams -ErrorAction Stop | ForEach-Object {
+            $targets.Add($_.DistinguishedName)
+        }
+
+        try {
+            Get-ADObject -SearchBase "CN=Sites,$($rootDse.configurationNamingContext)" -LDAPFilter '(objectClass=site)' @adParams -ErrorAction Stop |
+                ForEach-Object { $targets.Add($_.DistinguishedName) }
+        } catch {
+            Write-DscTrace -Level Warn -Message "Could not enumerate AD sites: $_"
+        }
+    } catch {
+        Write-DscTrace -Level Warn -Message "Could not enumerate GPO link targets via ActiveDirectory module: $_"
+    }
+
+    return ($targets | Select-Object -Unique)
+}
 #endregion
 
 try {
@@ -148,6 +185,46 @@ try {
             $current = Get-CurrentState
             $current['_inDesiredState'] = Test-InDesiredState -current $current
             $current | ConvertTo-Json -Compress
+        }
+
+        'Export' {
+            # Emit one JSON line per existing GPO link so `dsc resource export` can build a configuration document.
+            # A declared 'target' scopes the export to that single container; a declared 'gpoName' filters to links for that GPO.
+            $targets = if (-not [string]::IsNullOrEmpty($target)) {
+                @($target)
+            } else {
+                if (-not (Get-Module -ListAvailable -Name ActiveDirectory -ErrorAction SilentlyContinue)) {
+                    Write-DscTrace -Level Error -Message 'The ActiveDirectory PowerShell module is required to enumerate GPO link targets for export. Install RSAT-AD-PowerShell.'
+                    exit 2
+                }
+                Import-Module ActiveDirectory -ErrorAction Stop
+                Get-AllLinkTargets
+            }
+
+            foreach ($t in $targets) {
+                try {
+                    $inheritance = Get-GPInheritance -Target $t @commonParams -ErrorAction Stop
+                } catch {
+                    Write-DscTrace -Level Warn -Message "Could not query GPO links at '$t': $_"
+                    continue
+                }
+                foreach ($link in $inheritance.GpoLinks) {
+                    if (-not [string]::IsNullOrEmpty($gpoName) -and $link.DisplayName -ne $gpoName) { continue }
+                    $state = [ordered]@{
+                        gpoName     = $link.DisplayName
+                        gpoId       = $link.GpoId.ToString()
+                        target      = $t
+                        ensure      = 'Present'
+                        linkEnabled = ConvertTo-YesNo -value $link.Enabled
+                        enforced    = ConvertTo-YesNo -value $link.Enforced
+                        order       = [int]$link.Order
+                        domain      = if (-not [string]::IsNullOrEmpty($domain)) { $domain } else { $null }
+                        server      = if (-not [string]::IsNullOrEmpty($server)) { $server } else { $null }
+                        _exist      = $true
+                    }
+                    $state | ConvertTo-Json -Compress
+                }
+            }
         }
 
         'Set' {

@@ -50,6 +50,20 @@
         "input": "stdin",
         "return": "state"
     },
+    "export": {
+        "executable": "powershell",
+        "args": [
+            "-NoLogo",
+            "-NonInteractive",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            "ActiveDirectory.GroupPolicy.GPRegistryValue.ps1",
+            "Export"
+        ],
+        "input": "stdin"
+    },
     "exitCodes": {
         "0": "Success",
         "1": "Invalid arguments or JSON input",
@@ -60,7 +74,6 @@
         "embedded": {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
             "type": "object",
-            "required": ["gpoName", "key", "valueName"],
             "additionalProperties": false,
             "properties": {
                 "gpoName": {
@@ -82,7 +95,7 @@
                 },
                 "value": {
                     "type": ["string", "integer", "number", "array", "null"],
-                    "description": "Registry value data. Use a string for String/ExpandString, an integer for DWord/QWord, an array of strings for MultiString, and an array of integers (bytes) for Binary. Required when ensure is 'Present'."
+                    "description": "Registry value data. Use a string for String/ExpandString, an integer for DWord/QWord, an array of strings for MultiString, and a Base64-encoded string for Binary (a legacy array of bytes is also accepted as input). Required when ensure is 'Present'."
                 },
                 "domain": {
                     "type": ["string", "null"],

@@ -1,0 +1,12 @@
+# Exports registry policy values into a usable configuration document.
+# Run with: dsc config export -f export-gpo-registry-values.dsc.yaml -o yaml > gpo-registry-values-current.dsc.yaml
+#
+# Declaring 'gpoName' scopes the export to that single GPO. Omit it (or use
+# export-all-resources.dsc.yaml) to export registry values for every GPO instead.
+$schema: https://aka.ms/dsc/schemas/v3/bundled/config/document.json
+resources:
+
+  - name: DSC-Test GPO Registry Policy Values
+    type: ActiveDirectory.GroupPolicy/GPRegistryValue
+    properties:
+      gpoName: DSC-Test

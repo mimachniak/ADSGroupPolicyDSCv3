@@ -21,6 +21,27 @@ The main DSC v3 resources are located in the `resources` folder:
 - `GPRegistryValue`
 - `GPPrefRegistryValue`
 
+## Export existing state to a configuration document
+
+All four resources implement the DSC v3 `export` operation, so you can inventory what already exists in the domain instead of writing the desired state by hand.
+
+Export a single resource type:
+
+```powershell
+dsc resource export -r ActiveDirectory.GroupPolicy/GPO -o yaml > gpo-inventory.dsc.yaml
+```
+
+Export every GPO, link, and registry value into one document using [examples/export-all-resources.dsc.yaml](./examples/export-all-resources.dsc.yaml):
+
+```powershell
+dsc config export -f examples/export-all-resources.dsc.yaml -o yaml > gpo-current-state.dsc.yaml
+```
+
+Notes:
+
+- `GPLink` export requires the `ActiveDirectory` PowerShell module (RSAT-AD-PowerShell) to enumerate every OU, domain root, and site that can hold a link.
+- `GPRegistryValue` and `GPPrefRegistryValue` export walks the registry policy tree per GPO (and, for preferences, per context and hive), so it can take longer to run on GPOs with many settings.
+
 ## Example images 
 
 ![DSC Active Directory Registry GPO](./image/gp-regedit-vaulue.png)  
