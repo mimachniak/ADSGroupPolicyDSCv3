@@ -1,13 +1,13 @@
-# Exports every existing GPO, link, and registry value into a usable configuration document.
-# Run with: dsc config export -f export-all-resources.dsc.yaml -o yaml > gpo-current-state.dsc.yaml
+# Exports GPO links into a usable configuration document.
+# Run with: dsc config export -f export-linked-to-ou-.dsc.yaml -o yaml > gpo-links-current.dsc.yaml
 #
-# The 'properties' values below are placeholders only. DSC requires them to satisfy each
-# resource's required-property schema, but the export operation ignores them and instead
-# enumerates every existing instance of the resource.
+# Declaring 'gpoName' filters the export to links for that GPO; declaring 'target' instead
+# scopes to a single OU/domain/site. Omit both (or use export-all-resources.dsc.yaml) to
+# export every link in the domain instead.
 $schema: https://aka.ms/dsc/schemas/v3/bundled/config/document.json
 resources:
 
-- name: Link GPO to Workstations OU
+- name: DSC-Test GPO links
   type: ActiveDirectory.GroupPolicy/GPLink
   properties:
     gpoName: DSC-Test

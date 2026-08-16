@@ -1,13 +1,12 @@
-# Exports every existing GPO, link, and registry value into a usable configuration document.
-# Run with: dsc config export -f export-all-resources.dsc.yaml -o yaml > gpo-current-state.dsc.yaml
+# Exports preference registry items into a usable configuration document.
+# Run with: dsc config export -f export-gpo-pref-registry-values.dsc.yaml -o yaml > gpo-pref-registry-values-current.dsc.yaml
 #
-# The 'properties' values below are placeholders only. DSC requires them to satisfy each
-# resource's required-property schema, but the export operation ignores them and instead
-# enumerates every existing instance of the resource.
+# Declaring 'gpoName' scopes the export to that single GPO. Omit it (or use
+# export-all-resources.dsc.yaml) to export preference items for every GPO instead.
 $schema: https://aka.ms/dsc/schemas/v3/bundled/config/document.json
 resources:
 
-  - name: All GPO Perf Registry Policy Values
+  - name: DSC-Test GPO Preference Registry Policy Values
     type: ActiveDirectory.GroupPolicy/GPPrefRegistryValue
     properties:
       gpoName: DSC-Test
