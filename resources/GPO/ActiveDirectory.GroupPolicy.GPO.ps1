@@ -133,7 +133,12 @@ try {
 
         'Export' {
             # Emit one JSON line per existing GPO so `dsc resource export` can build a configuration document.
-            $gpos = Get-GPO -All @commonParams -ErrorAction Stop
+            # A declared 'name' scopes the export to that single GPO instead of every GPO.
+            $gpos = if (-not [string]::IsNullOrEmpty($name)) {
+                @(Get-GPO -Name $name @commonParams -ErrorAction Stop)
+            } else {
+                Get-GPO -All @commonParams -ErrorAction Stop
+            }
             foreach ($gpo in $gpos) {
                 $state = [ordered]@{
                     name      = $gpo.DisplayName

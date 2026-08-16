@@ -16,18 +16,13 @@ resources:
     type: ActiveDirectory.GroupPolicy/GPLink
     properties:
       gpoName: placeholder
-      target: placeholder
 
   - name: All GPO Registry Policy Values
     type: ActiveDirectory.GroupPolicy/GPRegistryValue
     properties:
       gpoName: placeholder
-      key: placeholder
-      valueName: placeholder
 
   - name: All GPO Preference Registry Values
     type: ActiveDirectory.GroupPolicy/GPPrefRegistryValue
     properties:
       gpoName: placeholder
-      context: User
-      key: placeholder

@@ -189,13 +189,19 @@ try {
 
         'Export' {
             # Emit one JSON line per existing GPO link so `dsc resource export` can build a configuration document.
-            if (-not (Get-Module -ListAvailable -Name ActiveDirectory -ErrorAction SilentlyContinue)) {
-                Write-DscTrace -Level Error -Message 'The ActiveDirectory PowerShell module is required to enumerate GPO link targets for export. Install RSAT-AD-PowerShell.'
-                exit 2
+            # A declared 'target' scopes the export to that single container; a declared 'gpoName' filters to links for that GPO.
+            $targets = if (-not [string]::IsNullOrEmpty($target)) {
+                @($target)
+            } else {
+                if (-not (Get-Module -ListAvailable -Name ActiveDirectory -ErrorAction SilentlyContinue)) {
+                    Write-DscTrace -Level Error -Message 'The ActiveDirectory PowerShell module is required to enumerate GPO link targets for export. Install RSAT-AD-PowerShell.'
+                    exit 2
+                }
+                Import-Module ActiveDirectory -ErrorAction Stop
+                Get-AllLinkTargets
             }
-            Import-Module ActiveDirectory -ErrorAction Stop
 
-            foreach ($t in (Get-AllLinkTargets)) {
+            foreach ($t in $targets) {
                 try {
                     $inheritance = Get-GPInheritance -Target $t @commonParams -ErrorAction Stop
                 } catch {
@@ -203,6 +209,7 @@ try {
                     continue
                 }
                 foreach ($link in $inheritance.GpoLinks) {
+                    if (-not [string]::IsNullOrEmpty($gpoName) -and $link.DisplayName -ne $gpoName) { continue }
                     $state = [ordered]@{
                         gpoName     = $link.DisplayName
                         gpoId       = $link.GpoId.ToString()

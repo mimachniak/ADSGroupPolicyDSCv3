@@ -89,10 +89,17 @@ if (-not [string]::IsNullOrEmpty($server)) { $commonParams['Server'] = $server }
 #endregion
 
 #region Helpers
+function ConvertTo-ByteArray($rawValue) {
+    # Accepts either a Base64 string (compact export/input form) or a legacy array of byte values.
+    if ($null -eq $rawValue) { return [byte[]]@() }
+    if ($rawValue -is [string]) { return [Convert]::FromBase64String($rawValue) }
+    return [byte[]]@($rawValue)
+}
+
 function ConvertTo-SerializableValue($rawValue, [string]$regType) {
     if ($null -eq $rawValue) { return $null }
     switch ($regType) {
-        'Binary'      { return @([byte[]]$rawValue) }
+        'Binary'      { return [Convert]::ToBase64String([byte[]]$rawValue) }
         'MultiString' { return @([string[]]$rawValue) }
         'DWord'       { return [int]$rawValue }
         'QWord'       { return [long]$rawValue }
@@ -107,11 +114,11 @@ function Compare-RegistryValues($currentValue, $desiredValue, [string]$regType) 
         'DWord'  { return ([long]$currentValue -eq [long]$desiredValue) }
         'QWord'  { return ([long]$currentValue -eq [long]$desiredValue) }
         'Binary' {
-            $a = [byte[]]$currentValue
-            $b = @($desiredValue)
+            $a = ConvertTo-ByteArray $currentValue
+            $b = ConvertTo-ByteArray $desiredValue
             if ($a.Count -ne $b.Count) { return $false }
             for ($i = 0; $i -lt $a.Count; $i++) {
-                if ($a[$i] -ne [byte]$b[$i]) { return $false }
+                if ($a[$i] -ne $b[$i]) { return $false }
             }
             return $true
         }
@@ -218,6 +225,14 @@ function Merge-Params([hashtable]$base, [hashtable]$extra) {
     return $merged
 }
 
+function Get-RegistryHiveRootKeys([string]$hiveName) {
+    # Get-GPPrefRegistryValue requires a real subkey after the hive name; the bare hive name alone
+    # is not a valid Key and always yields zero results. Seed the walk with the hive's actual
+    # first-level subkey names (e.g. SOFTWARE, SYSTEM) so the walk has valid starting points.
+    return @(Get-ChildItem -Path "Registry::$hiveName" -ErrorAction SilentlyContinue |
+        ForEach-Object { "$hiveName\$($_.PSChildName)" })
+}
+
 function Get-AllPrefRegistryItems([string]$gpo, [string]$ctx) {
     # Walks each registry hive's preference tree per GPO/context. Get-GPPrefRegistryValue returns
     # first-level items plus first-level subkeys for any key; subkeys are queued so every item is found.
@@ -225,7 +240,7 @@ function Get-AllPrefRegistryItems([string]$gpo, [string]$ctx) {
     $rootKeys = @('HKEY_CLASSES_ROOT', 'HKEY_CURRENT_USER', 'HKEY_LOCAL_MACHINE', 'HKEY_USERS', 'HKEY_CURRENT_CONFIG')
     foreach ($rootKey in $rootKeys) {
         $queue = [System.Collections.Generic.Queue[string]]::new()
-        $queue.Enqueue($rootKey)
+        foreach ($seed in (Get-RegistryHiveRootKeys -hiveName $rootKey)) { $queue.Enqueue($seed) }
         $visited = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
         while ($queue.Count -gt 0) {
             $currentKey = $queue.Dequeue()
@@ -259,7 +274,12 @@ try {
 
         'Export' {
             # Emit one JSON line per existing preference item so `dsc resource export` can build a configuration document.
-            $gpos = Get-GPO -All @commonParams -ErrorAction Stop
+            # A declared 'gpoName' scopes the export to that single GPO instead of every GPO.
+            $gpos = if (-not [string]::IsNullOrEmpty($gpoName)) {
+                @(Get-GPO -Name $gpoName @commonParams -ErrorAction Stop)
+            } else {
+                Get-GPO -All @commonParams -ErrorAction Stop
+            }
             foreach ($gpo in $gpos) {
                 foreach ($ctx in @('User', 'Computer')) {
                     foreach ($item in (Get-AllPrefRegistryItems -gpo $gpo.DisplayName -ctx $ctx)) {
@@ -318,7 +338,9 @@ try {
 
                 if (-not [string]::IsNullOrEmpty($valueName)) { $setParams['ValueName'] = $valueName }
                 if (-not [string]::IsNullOrEmpty($valueType)) { $setParams['Type']      = $valueType }
-                if ($null -ne $value)                         { $setParams['Value']     = $value }
+                if ($null -ne $value) {
+                    $setParams['Value'] = if ($valueType -eq 'Binary') { ConvertTo-ByteArray $value } else { $value }
+                }
                 if ($null -ne $order)                         { $setParams['Order']     = $order }
                 if ($disabled)                                { $setParams['Disable']   = $true }
 

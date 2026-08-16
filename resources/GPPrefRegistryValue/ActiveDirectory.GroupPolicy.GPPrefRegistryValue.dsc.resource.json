@@ -74,7 +74,6 @@
         "embedded": {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
             "type": "object",
-            "required": ["gpoName", "context", "key"],
             "additionalProperties": false,
             "properties": {
                 "gpoName": {
@@ -106,7 +105,7 @@
                 },
                 "value": {
                     "type": ["string", "integer", "number", "array", "null"],
-                    "description": "Registry value data. Use a string for String/ExpandString, integer for DWord/QWord, array of strings for MultiString, array of integers (bytes) for Binary."
+                    "description": "Registry value data. Use a string for String/ExpandString, integer for DWord/QWord, array of strings for MultiString, and a Base64-encoded string for Binary (a legacy array of bytes is also accepted as input)."
                 },
                 "order": {
                     "type": ["integer", "null"],
